@@ -29,3 +29,24 @@ vendor_opensource_display-drivers (ruan-u-oss) against the source kernel
 kernel/patches/0002 (reprogram the INTF/DSI timing at the continuous-splash handoff when the
 bootloader left another refresh rate). Select one with `DIZI_SOURCE_DISPLAY=baseline|splashfix`
 (replaces msm_drm.ko in both vendor_ramdisk and vendor_dlkm).
+
+## ax_dragonite.ko (AxionOS)
+
+`modules/vendor_dlkm/ax_dragonite.ko` is AxionOS's thread affinity/boost helper
+(device/axion/common/kernel/modules/ax_dragonite, lineage-23.2 d80f522), built
+against kernel_xiaomi_ruan (gki_defconfig + vendor/ruan_rom.config, clang-r416183b)
+and stripped of debug info. All 42 imports match that kernel's CRCs. It is not
+in modules.load: AxionOS's init.axion.modules.rc modprobes it at early-init.
+
+Lineage's kernel.mk cannot build it in the ROM build here: it only builds
+external modules alongside in-tree ones, and then writes modules.dep/modules.load
+for vendor_dlkm from the source-built modules alone, over the prebuilt ones.
+
+Rebuild it whenever the kernel's KMI changes (e.g. after an upstream merge):
+
+    make -C <kernel> O=<out> ARCH=arm64 LLVM=1 LLVM_IAS=1 \
+        CROSS_COMPILE=aarch64-linux-gnu- M=<ax_dragonite dir> modules
+    llvm-strip --strip-debug -o modules/vendor_dlkm/ax_dragonite.ko <built .ko>
+
+With the stock Image (RUAN_PREBUILT_KERNEL=true) it does not load (different
+CRCs); nothing else depends on it.
